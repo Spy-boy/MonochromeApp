@@ -3,7 +3,7 @@
 
 A native Android wrapper for [monochrome.tf](https://monochrome.tf) — a HiRes music streaming platform.
 
-![Platform](https://img.shields.io/badge/Platform-Android-brightgreen) ![Language](https://img.shields.io/badge/Language-Kotlin-orange) ![License](https://img.shields.io/badge/License-MIT-lightgrey)
+![Platform](https://img.shields.io/badge/Platform-Android-brightgreen) ![Language](https://img.shields.io/badge/Language-Kotlin-orange) 
 
 ---
 
