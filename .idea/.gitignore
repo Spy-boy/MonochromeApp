@@ -1,0 +1,40 @@
+# Default ignored files
+/shelf/
+/workspace.xml
+
+# Gradle files
+.gradle/
+build/
+**/build/
+
+# Local configuration (contains your SDK path — machine-specific)
+local.properties
+
+# Android Studio IDE files
+.idea/
+*.iml
+*.iws
+*.ipr
+.DS_Store
+
+# Keystore / signing configs — NEVER commit these
+*.keystore
+*.jks
+keystore.properties
+
+# Generated files
+gen/
+out/
+
+# Google Services (contains API keys — keep private)
+google-services.json
+
+# Navigation editor temp files
+.navigation/
+
+# Proguard
+proguard/
+
+# NDK (if using)
+.externalNativeBuild/
+.cxx/
