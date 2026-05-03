@@ -4,7 +4,7 @@
             "outputFile": "com.monochrome.app-mergeDebugResources-35:/values-land/values-land.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\91831\\.gradle\\caches\\9.5.0\\transforms\\d53b6e3eafbc49efa5b48a18be375a32\\transformed\\material-1.13.0\\res\\values-land\\values-land.xml",
+                    "source": "C:\\Users\\91831\\.gradle\\caches\\9.5.0\\transforms\\fb0d8a62983316e83587877567621f3d\\transformed\\material-1.13.0\\res\\values-land\\values-land.xml",
                     "from": {
                         "startLines": "2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,22,31,36",
                         "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
@@ -23,7 +23,7 @@
                     }
                 },
                 {
-                    "source": "C:\\Users\\91831\\.gradle\\caches\\9.5.0\\transforms\\cedffff876f25f61d97024043c205d8d\\transformed\\appcompat-1.7.1\\res\\values-land\\values-land.xml",
+                    "source": "C:\\Users\\91831\\.gradle\\caches\\9.5.0\\transforms\\2d074ae67c39a7f2edb351ce8a7d875a\\transformed\\appcompat-1.7.1\\res\\values-land\\values-land.xml",
                     "from": {
                         "startLines": "2,3,4",
                         "startColumns": "4,4,4",

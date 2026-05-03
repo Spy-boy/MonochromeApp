@@ -4,7 +4,7 @@
             "outputFile": "com.monochrome.app-mergeDebugResources-35:/values-hdpi-v4/values-hdpi-v4.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\91831\\.gradle\\caches\\9.5.0\\transforms\\cedffff876f25f61d97024043c205d8d\\transformed\\appcompat-1.7.1\\res\\values-hdpi-v4\\values-hdpi-v4.xml",
+                    "source": "C:\\Users\\91831\\.gradle\\caches\\9.5.0\\transforms\\2d074ae67c39a7f2edb351ce8a7d875a\\transformed\\appcompat-1.7.1\\res\\values-hdpi-v4\\values-hdpi-v4.xml",
                     "from": {
                         "startLines": "2",
                         "startColumns": "4",
