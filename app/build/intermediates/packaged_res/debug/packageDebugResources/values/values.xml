@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="ic_launcher_background">#000000</color>
+    <color name="pull_indicator_bg">#CC222222</color>
+    <color name="white">#FFFFFFFF</color>
+    <plurals name="loaded_tracks">
+        <item quantity="one">Loaded %d track</item>
+        <item quantity="other">Loaded %d tracks</item>
+    </plurals>
+    <string name="app_name">Monochrome</string>
+    <string name="download_failed">Download failed: %s</string>
+    <string name="downloading_file">Downloading: %s</string>
+    <string name="no_audio_files_found">No audio files found</string>
+    <string name="preparing_file">Preparing: %s…</string>
+    <string name="pull_to_reload_hold">3</string>
+    <string name="pull_to_reload_reloading_in">%d</string>
+    <string name="reloading">Reloading…</string>
+    <string name="saved_file">Saved: %s</string>
+    <string name="storage_permission_denied">Storage permission denied</string>
+    <string name="unsupported_download_type">Unsupported download type</string>
+    <style name="Theme.Monochrome" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/black</item>
+        <item name="colorPrimaryDark">@color/black</item>
+        <item name="colorAccent">@color/white</item>
+        <item name="android:windowBackground">@color/black</item>
+        <item name="android:statusBarColor">@color/black</item>
+        <item name="android:navigationBarColor">@color/black</item>
+    </style>
+</resources>
