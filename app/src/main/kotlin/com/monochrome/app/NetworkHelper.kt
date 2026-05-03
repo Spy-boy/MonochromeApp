@@ -3,7 +3,6 @@ package com.monochrome.app
 import android.webkit.CookieManager
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
-import com.monochrome.app.Constants.DEFAULT_ORIGIN
 import com.monochrome.app.Constants.JS_HOOKS
 import com.monochrome.app.Constants.PROXY_UA
 import java.io.ByteArrayInputStream
@@ -23,7 +22,7 @@ object NetworkHelper {
             conn.setRequestProperty("User-Agent", PROXY_UA)
             CookieManager.getInstance().getCookie(request.url.toString())?.let { conn.setRequestProperty("Cookie", it) }
             request.requestHeaders?.forEach { (k, v) -> 
-                if (!k.equals("User-Agent", true) && !k.equals("Cookie", true)) conn.setRequestProperty(k, v) 
+                if (!k.equals("User-Agent", ignoreCase = true) && !k.equals("Cookie", ignoreCase = true)) conn.setRequestProperty(k, v) 
             }
             
             if (conn.responseCode >= 400) return null
@@ -38,7 +37,7 @@ object NetworkHelper {
 
             val respHeaders = LinkedHashMap<String, String>()
             conn.headerFields.forEach { (k, v) ->
-                if (k != null && !k.equals("Content-Security-Policy", true) && !k.equals("X-Frame-Options", true) && !k.equals("Content-Length", true) && !k.equals("Transfer-Encoding", true) && !k.equals("Content-Encoding", true) && !k.equals("Vary", true))
+                if ((k != null) && (!k.equals("Content-Security-Policy", ignoreCase = true)) && (!k.equals("X-Frame-Options", ignoreCase = true)) && (!k.equals("Content-Length", ignoreCase = true)) && (!k.equals("Transfer-Encoding", ignoreCase = true)) && (!k.equals("Content-Encoding", ignoreCase = true)) && (!k.equals("Vary", ignoreCase = true)))
                     respHeaders[k] = v.joinToString(", ")
             }
             WebResourceResponse("text/html", charset.name(), conn.responseCode, "OK", respHeaders, ByteArrayInputStream(patched.toByteArray(charset)))
@@ -51,7 +50,7 @@ object NetworkHelper {
             "Access-Control-Allow-Methods" to "GET, POST, PUT, PATCH, DELETE, OPTIONS",
             "Access-Control-Allow-Headers" to (requestHeaders?.get("Access-Control-Request-Headers") ?: "*"),
             "Access-Control-Allow-Credentials" to "true",
-            "Access-Control-Max-Age" to "86400"
+            "Access-Control-Max-Age" to "86400",
         )
         return WebResourceResponse("text/plain", "UTF-8", 204, "No Content", headers, ByteArrayInputStream(ByteArray(0)))
     }

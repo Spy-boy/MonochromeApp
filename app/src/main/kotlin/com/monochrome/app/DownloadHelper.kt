@@ -5,14 +5,13 @@ import android.content.Context
 import android.os.Environment
 import android.webkit.CookieManager
 import androidx.core.net.toUri
-import com.monochrome.app.Constants.MIME_MPEG
 import com.monochrome.app.Constants.MIME_OCTET_STREAM
 import com.monochrome.app.Constants.MIME_FLAC
 
 object DownloadHelper {
 
     fun startHttpDownload(context: Context, url: String, userAgent: String, fileName: String, mimeType: String) {
-        val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as? DownloadManager ?: return
+        val dm = (context.getSystemService(Context.DOWNLOAD_SERVICE) as? DownloadManager) ?: return
         try {
             val req = DownloadManager.Request(url.toUri()).apply {
                 setMimeType(mimeType)

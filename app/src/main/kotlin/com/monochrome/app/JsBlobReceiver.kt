@@ -26,6 +26,7 @@ import java.io.FileOutputStream
 
 class JsBlobReceiver(private val context: Context) {
 
+    @Suppress("unused")
     @JavascriptInterface
     fun onBlobData(dataUrl: String, fileName: String, mimeType: String) {
         Thread {
@@ -34,7 +35,7 @@ class JsBlobReceiver(private val context: Context) {
                 if (base64.isEmpty()) { toast(context.getString(R.string.download_failed, "no data")); return@Thread }
 
                 val bytes = Base64.decode(base64, Base64.DEFAULT)
-                val resolvedMime = mimeType.takeIf { it.isNotBlank() && it != MIME_OCTET_STREAM }
+                val resolvedMime = mimeType.takeIf { (it.isNotBlank()) && (it != MIME_OCTET_STREAM) }
                     ?: dataUrl.substringAfter("data:").substringBefore(";").ifBlank { MIME_OCTET_STREAM }
 
                 val safeName = ensureExtension(fileName.trim().ifBlank { "download" }, resolvedMime)
@@ -50,11 +51,13 @@ class JsBlobReceiver(private val context: Context) {
         }.start()
     }
 
+    @Suppress("unused")
     @JavascriptInterface
     fun onBlobError(message: String) {
         toast(context.getString(R.string.download_failed, message))
     }
 
+    @Suppress("unused")
     @JavascriptInterface
     fun onMetadataChanged(title: String, artist: String, artUrl: String) {
         val ctx = context.applicationContext
@@ -67,6 +70,7 @@ class JsBlobReceiver(private val context: Context) {
         ctx.startForegroundService(intent)
     }
 
+    @Suppress("unused")
     @JavascriptInterface
     fun onPlaybackStateChanged(isPlaying: Boolean) {
         val intent = Intent(context.applicationContext, MusicService::class.java).apply {
@@ -76,11 +80,13 @@ class JsBlobReceiver(private val context: Context) {
         context.startService(intent)
     }
 
+    @Suppress("unused")
     @JavascriptInterface
     fun requestFolderPicker(callbackId: String) {
         (context as? MainActivity)?.launchFolderPicker(callbackId)
     }
 
+    @Suppress("unused")
     @JavascriptInterface
     fun requestFileContent(fileUriString: String, callbackId: String) {
         Thread {
@@ -144,14 +150,14 @@ class JsBlobReceiver(private val context: Context) {
         val knownExts = setOf("flac","wav","mp3","aac","ogg","opus","m4a","alac","aiff","dsf","dff","wv","ape","zip")
         if (name.substringAfterLast('.', "").lowercase() in knownExts) return name
         val ext = when {
-            mimeType.contains("flac", true) -> "flac"
-            mimeType.contains("wav",  true) -> "wav"
-            mimeType.contains("mpeg", true) || mimeType.contains("mp3", true) -> "mp3"
-            mimeType.contains("aac",  true) -> "aac"
-            mimeType.contains("ogg",  true) -> "ogg"
-            mimeType.contains("opus", true) -> "opus"
-            mimeType.contains("m4a",  true) -> "m4a"
-            mimeType.contains("zip",  true) -> "zip"
+            mimeType.contains("flac", ignoreCase = true) -> "flac"
+            mimeType.contains("wav",  ignoreCase = true) -> "wav"
+            mimeType.contains("mpeg", ignoreCase = true) || mimeType.contains("mp3", ignoreCase = true) -> "mp3"
+            mimeType.contains("aac",  ignoreCase = true) -> "aac"
+            mimeType.contains("ogg",  ignoreCase = true) -> "ogg"
+            mimeType.contains("opus", ignoreCase = true) -> "opus"
+            mimeType.contains("m4a",  ignoreCase = true) -> "m4a"
+            mimeType.contains("zip",  ignoreCase = true) -> "zip"
             else -> "bin"
         }
         return "$name.$ext"

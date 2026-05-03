@@ -15,11 +15,17 @@ object FileSystemHelper {
 
         fun scanDir(docId: String) {
             val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, docId)
-            contentResolver.query(childrenUri, arrayOf(
-                DocumentsContract.Document.COLUMN_DOCUMENT_ID,
-                DocumentsContract.Document.COLUMN_DISPLAY_NAME,
-                DocumentsContract.Document.COLUMN_MIME_TYPE
-            ), null, null, null)?.use { c ->
+            contentResolver.query(
+                childrenUri,
+                arrayOf(
+                    DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                    DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                    DocumentsContract.Document.COLUMN_MIME_TYPE,
+                ),
+                null,
+                null,
+                null,
+            )?.use { c ->
                 val iId = c.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
                 val iName = c.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
                 val iMime = c.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_MIME_TYPE)
@@ -29,7 +35,7 @@ object FileSystemHelper {
                     val mime = c.getString(iMime) ?: ""
                     if (mime == DocumentsContract.Document.MIME_TYPE_DIR) {
                         scanDir(childId)
-                    } else if (mime.startsWith("audio/") || name.substringAfterLast('.', "").lowercase() in audioExts) {
+                    } else if ((mime.startsWith("audio/")) || (name.substringAfterLast('.', "").lowercase() in audioExts)) {
                         results.add(Pair(DocumentsContract.buildDocumentUriUsingTree(treeUri, childId), name))
                     }
                 }

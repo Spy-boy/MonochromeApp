@@ -71,7 +71,7 @@ class MusicService : MediaBrowserServiceCompat() {
                 val artist = intent.getStringExtra("artist")?.takeIf { it.isNotBlank() } ?: "Monochrome"
                 val artUrl = intent.getStringExtra("art_url") ?: ""
                 
-                if (name != currentTrack || artist != currentArtist || artUrl != currentArtUrl) {
+                if ((name != currentTrack) || (artist != currentArtist) || (artUrl != currentArtUrl)) {
                     currentTrack = name
                     currentArtist = artist
                     currentArtUrl = artUrl
@@ -154,7 +154,7 @@ class MusicService : MediaBrowserServiceCompat() {
             .setState(
                 if (isPlaying) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED,
                 PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN,
-                1.0f
+                1.0f,
             )
             .setActions(
                 PlaybackStateCompat.ACTION_PLAY or PlaybackStateCompat.ACTION_PAUSE or
@@ -179,12 +179,14 @@ class MusicService : MediaBrowserServiceCompat() {
     private fun setupMediaSession() {
         mediaSession = MediaSessionCompat(this, "Monochrome").apply {
             isActive = true
-            setCallback(object : MediaSessionCompat.Callback() {
-                override fun onPlay() = sendBroadcast(Intent(ACTION_PLAY).setPackage(packageName))
-                override fun onPause() = sendBroadcast(Intent(ACTION_PAUSE).setPackage(packageName))
-                override fun onSkipToNext() = sendBroadcast(Intent(ACTION_NEXT).setPackage(packageName))
-                override fun onSkipToPrevious() = sendBroadcast(Intent(ACTION_PREVIOUS).setPackage(packageName))
-            })
+            setCallback(
+                object : MediaSessionCompat.Callback() {
+                    override fun onPlay() = sendBroadcast(Intent(ACTION_PLAY).setPackage(packageName))
+                    override fun onPause() = sendBroadcast(Intent(ACTION_PAUSE).setPackage(packageName))
+                    override fun onSkipToNext() = sendBroadcast(Intent(ACTION_NEXT).setPackage(packageName))
+                    override fun onSkipToPrevious() = sendBroadcast(Intent(ACTION_PREVIOUS).setPackage(packageName))
+                }
+            )
         }
         sessionToken = mediaSession?.sessionToken
     }

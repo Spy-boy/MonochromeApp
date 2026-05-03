@@ -8,7 +8,6 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -174,6 +173,7 @@ class MainActivity : AppCompatActivity() {
         setIntent(intent)
     }
 
+    @Suppress("DEPRECATION")
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
         if (level >= TRIM_MEMORY_MODERATE) {
@@ -184,8 +184,8 @@ class MainActivity : AppCompatActivity() {
     // ─── Setup Logic ─────────────────────────────────────────────────────────
 
     private fun requestRuntimePermissions() {
-        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P &&
-            ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
+        if ((Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) &&
+            (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
         ) reqStoragePerm.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -218,7 +218,6 @@ class MainActivity : AppCompatActivity() {
             displayZoomControls = false
             userAgentString = PROXY_UA
             safeBrowsingEnabled = true
-            databaseEnabled = true
         }
 
         webView.webViewClient = createWebViewClient()
@@ -277,7 +276,7 @@ class MainActivity : AppCompatActivity() {
             return when {
                 isLocalFile -> serveLocalFile(request)
                 isMainDomain && method == "GET" && !url.path.orEmpty().contains("oauth") -> {
-                    val acceptsHtml = request.requestHeaders?.get("Accept")?.contains(MIME_HTML, true) == true
+                    val acceptsHtml = request.requestHeaders?.get("Accept")?.contains(MIME_HTML, ignoreCase = true) == true
                     val looksLikeHtml = url.path.let { it == "/" || it?.endsWith(".html") == true }
                     if (acceptsHtml || looksLikeHtml) NetworkHelper.injectHooks(request) else null
                 }
