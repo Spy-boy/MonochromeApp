@@ -55,15 +55,6 @@ MonochromeApp
 
 ---
 
-## Technical Notes
-
-- **CORS Proxy** — Requests to `auth.monochrome.tf` and other subdomains are proxied natively to bypass WebView CORS restrictions
-- **MediaSession Polyfill** — Injected before page load to prevent crashes on older WebView versions
-- **Blob Downloads** — `URL.createObjectURL` and `HTMLAnchorElement.prototype.click` are intercepted to capture real filenames before blobs are revoked
-- **Local Files** — `showDirectoryPicker()` is polyfilled with a native Android folder picker; async iterables are implemented without async generators for WebView 101 compatibility
-
----
-
 ## License
 
 This project is for personal use. [monochrome.tf](https://monochrome.tf) and its content are property of their respective owners.
