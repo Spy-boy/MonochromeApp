@@ -54,7 +54,6 @@ MonochromeApp
 | `WRITE_EXTERNAL_STORAGE` | Save downloads (Android 9 and below) |
 
 ---
----
 
 ## License
 
