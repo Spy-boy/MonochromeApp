@@ -1,10 +1,10 @@
 {
     "logs": [
         {
-            "outputFile": "com.monochrome.app-mergeDebugResources-35:/values-v26/values-v26.xml",
+            "outputFile": "com.monochrome.app-mergeDebugResources-34:/values-v26/values-v26.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\91831\\.gradle\\caches\\9.5.0\\transforms\\2d074ae67c39a7f2edb351ce8a7d875a\\transformed\\appcompat-1.7.1\\res\\values-v26\\values-v26.xml",
+                    "source": "C:\\Users\\91831\\.gradle\\caches\\9.5.0\\transforms\\2c9d6c68d02ee01b9d79f201d48c1f9d\\transformed\\appcompat-1.7.1\\res\\values-v26\\values-v26.xml",
                     "from": {
                         "startLines": "2,3,4,8,12,16",
                         "startColumns": "4,4,4,4,4,4",
