@@ -57,7 +57,15 @@ object Constants {
         _metadata = value;
         if (value) {
            var art = (value.artwork && value.artwork.length > 0) ? value.artwork[0].src : '';
-           MonochromeApp.onMetadataChanged(value.title || '', value.artist || '', art);
+           var localUri = '';
+           try {
+             var a = document.querySelector('audio,video');
+             if(a && a.src && a.src.includes('local-file.monochrome.tf')){
+               var url = new URL(a.src);
+               localUri = url.searchParams.get('uri') || '';
+             }
+           } catch(e){}
+           MonochromeApp.onMetadataChanged(value.title || '', value.artist || '', art, localUri);
         }
       },
       configurable: true
@@ -97,7 +105,7 @@ object Constants {
   // 3. Track & Playback Monitor
   if(!window.__mcTrack){
     window.__mcTrack = true;
-    var lastT = '', lastA = '', lastArt = '';
+    var lastT = '', lastA = '', lastArt = '', lastSrc = '';
     var lastState = false;
 
     function getTitle(){
@@ -135,9 +143,21 @@ object Constants {
 
     function check(){
       var t = getTitle(), a = getArtist(), art = getArtwork();
-      if(t !== lastT || a !== lastA || art !== lastArt){
-        lastT = t; lastA = a; lastArt = art;
-        MonochromeApp.onMetadataChanged(t, a, art);
+      var localUri = '', currentSrc = '';
+      try {
+        var aud = document.querySelector('audio,video');
+        if(aud && aud.src) {
+          currentSrc = aud.src;
+          if(currentSrc.includes('local-file.monochrome.tf')){
+            var url = new URL(currentSrc);
+            localUri = url.searchParams.get('uri') || '';
+          }
+        }
+      } catch(e){}
+
+      if(t !== lastT || a !== lastA || art !== lastArt || currentSrc !== lastSrc){
+        lastT = t; lastA = a; lastArt = art; lastSrc = currentSrc;
+        MonochromeApp.onMetadataChanged(t, a, art, localUri);
       }
       var s = isPlaying();
       if(s !== lastState){

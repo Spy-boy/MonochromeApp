@@ -12,6 +12,8 @@ import android.content.pm.ServiceInfo
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.media.AudioManager
+import android.media.MediaMetadataRetriever
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.support.v4.media.MediaBrowserCompat
@@ -43,6 +45,7 @@ class MusicService : MediaBrowserServiceCompat() {
     private var currentTrack = ""
     private var currentArtist = "Monochrome"
     private var currentArtUrl = ""
+    private var currentLocalUri = ""
     private var currentBitmap: Bitmap? = null
     private var isPlaying = false
 
@@ -70,19 +73,16 @@ class MusicService : MediaBrowserServiceCompat() {
                 val name = intent.getStringExtra(EXTRA_TRACK_NAME)?.takeIf { it.isNotBlank() } ?: "Monochrome"
                 val artist = intent.getStringExtra("artist")?.takeIf { it.isNotBlank() } ?: "Monochrome"
                 val artUrl = intent.getStringExtra("art_url") ?: ""
+                val localUri = intent.getStringExtra("local_uri") ?: ""
                 
-                if ((name != currentTrack) || (artist != currentArtist) || (artUrl != currentArtUrl)) {
+                if ((name != currentTrack) || (artist != currentArtist) || (artUrl != currentArtUrl) || (localUri != currentLocalUri)) {
                     currentTrack = name
                     currentArtist = artist
                     currentArtUrl = artUrl
+                    currentLocalUri = localUri
                     needsUpdate = true
                     
-                    if (artUrl.isNotBlank()) {
-                        downloadArt(artUrl)
-                    } else {
-                        currentBitmap = null
-                        updateMetadataAndNotify()
-                    }
+                    fetchArt(artUrl, localUri)
                 }
             }
             ACTION_UPDATE_STATE -> {
@@ -101,20 +101,60 @@ class MusicService : MediaBrowserServiceCompat() {
         return START_STICKY
     }
 
-    private fun downloadArt(url: String) {
+    private fun fetchArt(url: String, localUri: String) {
         Thread {
             try {
-                val conn = URL(url).openConnection() as HttpURLConnection
-                conn.connectTimeout = 5000
-                conn.readTimeout = 5000
-                conn.connect()
-                val bitmap = BitmapFactory.decodeStream(conn.inputStream)
-                if (bitmap != null && url == currentArtUrl) {
+                var bitmap: Bitmap? = null
+                
+                // 1. Try fetching from URL if it's a real HTTP(S) link
+                if (url.startsWith("http")) {
+                    try {
+                        val conn = URL(url).openConnection() as HttpURLConnection
+                        conn.connectTimeout = 5000
+                        conn.readTimeout = 5000
+                        conn.connect()
+                        bitmap = BitmapFactory.decodeStream(conn.inputStream)
+                    } catch (e: Exception) {
+                        android.util.Log.w("MusicService", "Failed to download art from HTTP: ${e.message}")
+                    }
+                } 
+                
+                // 2. Try fetching from content URI if url is a content URI
+                if (bitmap == null && url.startsWith("content://")) {
+                    try {
+                        contentResolver.openInputStream(Uri.parse(url))?.use { 
+                            bitmap = BitmapFactory.decodeStream(it)
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.w("MusicService", "Failed to load art from content URL: ${e.message}")
+                    }
+                }
+                
+                // 3. Fallback: Extract embedded art from the local audio file URI
+                if (bitmap == null && localUri.isNotBlank()) {
+                    val retriever = MediaMetadataRetriever()
+                    try {
+                        val uri = if (localUri.startsWith("content://")) Uri.parse(localUri) else Uri.parse(localUri)
+                        retriever.setDataSource(this, uri)
+                        val art = retriever.embeddedPicture
+                        if (art != null) {
+                            bitmap = BitmapFactory.decodeByteArray(art, 0, art.size)
+                        } else {
+                            android.util.Log.d("MusicService", "No embedded picture found in $localUri")
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("MusicService", "MetadataRetriever failed for $localUri: ${e.message}")
+                    } finally {
+                        try { retriever.release() } catch (_: Exception) {}
+                    }
+                }
+
+                if (url == currentArtUrl && localUri == currentLocalUri) {
                     currentBitmap = bitmap
                     runOnUiThread { updateMetadataAndNotify() }
                 }
             } catch (e: Exception) {
-                android.util.Log.e("MusicService", "Art download failed: ${e.message}")
+                android.util.Log.e("MusicService", "Art fetch thread failed: ${e.message}")
             }
         }.start()
     }

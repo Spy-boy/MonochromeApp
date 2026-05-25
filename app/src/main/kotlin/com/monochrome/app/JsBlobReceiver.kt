@@ -59,13 +59,14 @@ class JsBlobReceiver(private val context: Context) {
 
     @Suppress("unused")
     @JavascriptInterface
-    fun onMetadataChanged(title: String, artist: String, artUrl: String) {
+    fun onMetadataChanged(title: String, artist: String, artUrl: String, localUri: String = "") {
         val ctx = context.applicationContext
         val intent = Intent(ctx, MusicService::class.java).apply {
             action = ACTION_UPDATE_TRACK
             putExtra(EXTRA_TRACK_NAME, title.trim())
             putExtra("artist", artist.trim())
             putExtra("art_url", artUrl.trim())
+            if (localUri.isNotBlank()) putExtra("local_uri", localUri.trim())
         }
         ctx.startForegroundService(intent)
     }

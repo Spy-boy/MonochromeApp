@@ -381,7 +381,6 @@ class MainActivity : AppCompatActivity() {
         val safeMime = mimeType.replace("\\", "\\\\").replace("'", "\\'")
         runOnUiThread {
             webView.evaluateJavascript("window.__mcGetBlob('$safeUrl','$safeName','$safeMime');", null)
-            ToastHelper.showToast(this, getString(R.string.preparing_file, fileName))
         }
     }
 
