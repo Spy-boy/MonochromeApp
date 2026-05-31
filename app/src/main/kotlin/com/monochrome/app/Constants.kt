@@ -18,8 +18,6 @@ object Constants {
     const val MIME_FLAC            = "audio/flac"
     const val MIME_OCTET_STREAM    = "application/octet-stream"
     const val MIME_HTML            = "text/html"
-    const val MIME_JS              = "application/javascript"
-    const val MIME_CSS             = "text/css"
 
     // ─── Network Constants ───────────────────────────────────────────────
     const val DEFAULT_ORIGIN       = "https://monochrome.tf"
@@ -412,6 +410,4 @@ object Constants {
   console.log('Monochrome Hooks Injected Successfully');
 })();
 """
-
-    const val JS_PAUSE = "if(window.__mcPause) window.__mcPause(); else (function(){var a=document.querySelector('audio,video');if(a)a.pause();})()"
 }

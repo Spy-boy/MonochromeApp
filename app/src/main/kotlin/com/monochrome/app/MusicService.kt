@@ -13,7 +13,6 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.media.AudioManager
 import android.media.MediaMetadataRetriever
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.support.v4.media.MediaBrowserCompat
@@ -21,6 +20,7 @@ import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import androidx.core.app.NotificationCompat
+import androidx.core.net.toUri
 import androidx.media.MediaBrowserServiceCompat
 import androidx.media.session.MediaButtonReceiver
 import com.monochrome.app.Constants.ACTION_NEXT
@@ -122,7 +122,7 @@ class MusicService : MediaBrowserServiceCompat() {
                 // 2. Try fetching from content URI if url is a content URI
                 if (bitmap == null && url.startsWith("content://")) {
                     try {
-                        contentResolver.openInputStream(Uri.parse(url))?.use { 
+                        contentResolver.openInputStream(url.toUri())?.use { 
                             bitmap = BitmapFactory.decodeStream(it)
                         }
                     } catch (e: Exception) {
@@ -134,8 +134,7 @@ class MusicService : MediaBrowserServiceCompat() {
                 if (bitmap == null && localUri.isNotBlank()) {
                     val retriever = MediaMetadataRetriever()
                     try {
-                        val uri = if (localUri.startsWith("content://")) Uri.parse(localUri) else Uri.parse(localUri)
-                        retriever.setDataSource(this, uri)
+                        retriever.setDataSource(this, localUri.toUri())
                         val art = retriever.embeddedPicture
                         if (art != null) {
                             bitmap = BitmapFactory.decodeByteArray(art, 0, art.size)
@@ -215,6 +214,11 @@ class MusicService : MediaBrowserServiceCompat() {
     override fun onGetRoot(clientPackageName: String, clientUid: Int, rootHints: Bundle?): BrowserRoot = BrowserRoot("root", null)
 
     override fun onLoadChildren(parentId: String, result: Result<MutableList<MediaBrowserCompat.MediaItem>>) = result.sendResult(mutableListOf())
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        stopSelf()
+        super.onTaskRemoved(rootIntent)
+    }
 
     private fun setupMediaSession() {
         mediaSession = MediaSessionCompat(this, "Monochrome").apply {

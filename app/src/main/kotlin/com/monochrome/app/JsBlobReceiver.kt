@@ -94,7 +94,7 @@ class JsBlobReceiver(private val context: Context) {
             try {
                 val uri = fileUriString.toUri()
                 var mime = context.contentResolver.getType(uri) ?: MIME_MPEG
-                if (mime == MIME_OCTET_STREAM && uri.path?.endsWith(".flac") == true) mime = MIME_FLAC
+                if ((mime == MIME_OCTET_STREAM) && (uri.path?.endsWith(".flac") == true)) mime = MIME_FLAC
 
                 val inputStream = try {
                     context.contentResolver.openInputStream(uri)

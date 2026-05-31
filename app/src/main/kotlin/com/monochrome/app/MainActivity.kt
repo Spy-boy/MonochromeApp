@@ -239,10 +239,10 @@ class MainActivity : AppCompatActivity() {
                 return true
             }
 
-            if (url.startsWith("http://") && (url.contains("monochrome.tf") || url.contains("lossless.wtf"))) {
-                view.loadUrl(url.replace("http://", "https://"))
-                return true
-            }
+        if (url.startsWith("http://") && (url.contains("monochrome.tf") || url.contains("lossless.wtf"))) {
+            view.loadUrl(url.replace("http://", "https://"))
+            return true
+        }
             return false
         }
 
@@ -267,7 +267,7 @@ class MainActivity : AppCompatActivity() {
             val host = url.host ?: return null
             val method = (request.method ?: "GET").uppercase()
 
-            val isTidal = host == "tidal.com" || host.endsWith(".tidal.com")
+            val isTidal = (host == "tidal.com") || host.endsWith(".tidal.com")
             val isWorker = host.endsWith(".workers.dev")
             val isLocalFile = host == "local-file.monochrome.tf"
             val isMainDomain = host == "monochrome.tf" || host == "monochrome.samidy.com" || host == "lossless.wtf" || host == "localhost" || host == "127.0.0.1"
@@ -361,7 +361,7 @@ class MainActivity : AppCompatActivity() {
     private fun setupOnBackPressed() {
         onBackPressedDispatcher.addCallback(
             this,
-            object : OnBackPressedCallback(true) {
+            object : OnBackPressedCallback(enabled = true) {
                 override fun handleOnBackPressed() {
                     if (webView.canGoBack()) {
                         webView.goBack()

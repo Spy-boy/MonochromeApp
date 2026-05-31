@@ -5,7 +5,6 @@ import android.content.Context
 import android.os.Environment
 import android.webkit.CookieManager
 import androidx.core.net.toUri
-import com.monochrome.app.Constants.MIME_OCTET_STREAM
 import com.monochrome.app.Constants.MIME_FLAC
 
 object DownloadHelper {
