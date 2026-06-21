@@ -50,6 +50,7 @@ class MainActivity : AppCompatActivity() {
     private val pullHandler = Handler(Looper.getMainLooper())
     private val pullThresholdPx get() = 80f * resources.displayMetrics.density
     private val holdDurationMs = 3000L
+    private var pullStartedInZone = false
 
     // ─── Activity Launchers ──────────────────────────────────────────────────
 
@@ -130,6 +131,44 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        webView.onResume()
+        webView.resumeTimers()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        webView.onPause()
+        CookieManager.getInstance().flush()
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        webView.saveState(outState)
+    }
+
+    override fun onDestroy() {
+        try { unregisterReceiver(mediaControlReceiver) } catch (_: Exception) { }
+        webView.destroy()
+        super.onDestroy()
+    }
+
+    @Suppress("DEPRECATION")
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        if (level >= TRIM_MEMORY_MODERATE) {
+            try { webView.clearCache(false) } catch (_: Exception) { }
+        }
+    }
+
+    // ─── Setup Logic ─────────────────────────────────────────────────────────
+
     private fun registerMediaControlReceiver() {
         val filter = IntentFilter().apply {
             addAction(ACTION_PLAY)
@@ -144,44 +183,6 @@ class MainActivity : AppCompatActivity() {
             registerReceiver(mediaControlReceiver, filter)
         }
     }
-
-    override fun onResume() {
-        super.onResume()
-        webView.onResume()
-        webView.resumeTimers()
-    }
-
-    override fun onPause() {
-        super.onPause()
-        webView.onPause()
-        CookieManager.getInstance().flush()
-    }
-
-    override fun onDestroy() {
-        try { unregisterReceiver(mediaControlReceiver) } catch (_: Exception) { }
-        webView.destroy()
-        super.onDestroy()
-    }
-
-    override fun onSaveInstanceState(outState: Bundle) {
-        super.onSaveInstanceState(outState)
-        webView.saveState(outState)
-    }
-
-    override fun onNewIntent(intent: Intent?) {
-        super.onNewIntent(intent)
-        setIntent(intent)
-    }
-
-    @Suppress("DEPRECATION")
-    override fun onTrimMemory(level: Int) {
-        super.onTrimMemory(level)
-        if (level >= TRIM_MEMORY_MODERATE) {
-            try { webView.clearCache(false) } catch (_: Exception) { }
-        }
-    }
-
-    // ─── Setup Logic ─────────────────────────────────────────────────────────
 
     private fun requestRuntimePermissions() {
         if ((Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) &&
@@ -267,7 +268,6 @@ class MainActivity : AppCompatActivity() {
             val host = url.host ?: return null
             val method = (request.method ?: "GET").uppercase()
 
-            val isTidal = (host == "tidal.com") || host.endsWith(".tidal.com")
             val isWorker = host.endsWith(".workers.dev")
             val isLocalFile = host == "local-file.monochrome.tf"
             val isMainDomain = host == "monochrome.tf" || host == "monochrome.samidy.com" || host == "lossless.wtf" || host == "localhost" || host == "127.0.0.1"
@@ -281,7 +281,7 @@ class MainActivity : AppCompatActivity() {
                     if (acceptsHtml || looksLikeHtml) NetworkHelper.injectHooks(request) else null
                 }
                 host.contains("discord.com") || host.contains("appleid.apple.com") || host.contains("google.com") || host.contains("accounts.google") || host.contains("gstatic.com") || host.contains("googleusercontent.com") || host.contains("play.google.com") -> null
-                (isMonochrome || isTidal || isWorker) && (method == "GET" || method == "OPTIONS") -> {
+                (isMonochrome || isWorker) && (method == "GET" || method == "OPTIONS") -> {
                     if (method == "OPTIONS") NetworkHelper.corsOkResponse(request.requestHeaders) else NetworkHelper.proxyWithCors(request, method)
                 }
                 else -> null
@@ -302,12 +302,18 @@ class MainActivity : AppCompatActivity() {
     private fun setupPullToReload() {
         webView.setOnTouchListener { v, event ->
             val atTop = !webView.canScrollVertically(-1)
+            val screenHeight = resources.displayMetrics.heightPixels
+            val topZone = screenHeight * 0.2f
+
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
                     pullStartY = event.rawY
                     pullReloadPosted = false
+                    pullStartedInZone = event.rawY <= topZone
                 }
                 MotionEvent.ACTION_MOVE -> {
+                    if (!pullStartedInZone) return@setOnTouchListener false
+
                     val dy = event.rawY - pullStartY
                     if (atTop && dy > pullThresholdPx && !pullReloadPosted) {
                         startPullReloadTimer()
@@ -317,7 +323,10 @@ class MainActivity : AppCompatActivity() {
                         cancelPullReload()
                     }
                 }
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> cancelPullReload()
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    cancelPullReload()
+                    pullStartedInZone = false
+                }
             }
             false
         }

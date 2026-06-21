@@ -5,13 +5,10 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Environment
-import android.os.Handler
-import android.os.Looper
 import android.provider.DocumentsContract
 import android.provider.MediaStore
 import android.util.Base64
 import android.webkit.JavascriptInterface
-import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.core.net.toUri
 import com.monochrome.app.Constants.ACTION_UPDATE_STATE
@@ -32,7 +29,7 @@ class JsBlobReceiver(private val context: Context) {
         Thread {
             try {
                 val base64 = dataUrl.substringAfter(",", "")
-                if (base64.isEmpty()) { toast(context.getString(R.string.download_failed, "no data")); return@Thread }
+                if (base64.isEmpty()) { ToastHelper.showToast(context, context.getString(R.string.download_failed, "no data")); return@Thread }
 
                 val bytes = Base64.decode(base64, Base64.DEFAULT)
                 val resolvedMime = mimeType.takeIf { (it.isNotBlank()) && (it != MIME_OCTET_STREAM) }
@@ -46,15 +43,14 @@ class JsBlobReceiver(private val context: Context) {
                     saveViaFileSystem(bytes, safeName)
                 }
             } catch (e: Exception) {
-                toast(context.getString(R.string.download_failed, e.message))
+                ToastHelper.showToast(context, context.getString(R.string.download_failed, e.message))
             }
         }.start()
     }
 
-    @Suppress("unused")
     @JavascriptInterface
     fun onBlobError(message: String) {
-        toast(context.getString(R.string.download_failed, message))
+        ToastHelper.showToast(context, context.getString(R.string.download_failed, message))
     }
 
     @Suppress("unused")
@@ -132,7 +128,7 @@ class JsBlobReceiver(private val context: Context) {
         try {
             resolver.openOutputStream(uri)?.use { it.write(bytes) } ?: throw Exception("Cannot open output stream")
             resolver.update(uri, ContentValues().apply { put(MediaStore.Downloads.IS_PENDING, 0) }, null, null)
-            toast(context.getString(R.string.saved_file, fileName))
+            ToastHelper.showToast(context, context.getString(R.string.saved_file, fileName))
         } catch (e: Exception) {
             resolver.delete(uri, null, null)
             throw e
@@ -144,7 +140,7 @@ class JsBlobReceiver(private val context: Context) {
         if (!dir.exists()) dir.mkdirs()
         val target = uniqueFile(dir, fileName)
         FileOutputStream(target).use { it.write(bytes) }
-        toast(context.getString(R.string.saved_file, target.name))
+        ToastHelper.showToast(context, context.getString(R.string.saved_file, target.name))
     }
 
     private fun ensureExtension(name: String, mimeType: String): String {
@@ -172,9 +168,5 @@ class JsBlobReceiver(private val context: Context) {
         var i = 1
         while (f.exists()) { f = File(dir, "$base($i)$ext"); i++ }
         return f
-    }
-
-    private fun toast(msg: String) {
-        Handler(Looper.getMainLooper()).post { Toast.makeText(context, msg, Toast.LENGTH_LONG).show() }
     }
 }

@@ -379,10 +379,7 @@ object Constants {
     };
   }
 
-  // 5. Tidal Extension Flag (Sync with v1.0.2)
-  window.__tidalOriginExtension = true;
-
-  // 6. Service Worker Auto-Update
+  // 5. Service Worker Auto-Update
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.addEventListener('controllerchange', function() {
       console.log('MonochromeJS: Service Worker Controller changed, reloading...');

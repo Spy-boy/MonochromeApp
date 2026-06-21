@@ -41,7 +41,10 @@ object NetworkHelper {
                     respHeaders[k] = v.joinToString(", ")
             }
             WebResourceResponse("text/html", charset.name(), conn.responseCode, "OK", respHeaders, ByteArrayInputStream(patched.toByteArray(charset)))
-        } catch (_: Exception) { null }
+        } catch (e: Exception) {
+            android.util.Log.e("MonochromeNetwork", "Error in injectHooks: ${e.message}", e)
+            null
+        }
     }
 
     fun corsOkResponse(requestHeaders: Map<String, String>?): WebResourceResponse {
@@ -59,7 +62,6 @@ object NetworkHelper {
         return try {
             val url = URL(request.url.toString())
             val host = url.host ?: ""
-            val isTidal = host == "tidal.com" || host.endsWith(".tidal.com")
             val isWorker = host.endsWith(".workers.dev")
 
             val conn = (url.openConnection() as HttpURLConnection).apply {
@@ -76,14 +78,9 @@ object NetworkHelper {
             }
             conn.setRequestProperty("User-Agent", PROXY_UA)
             
-            if (isTidal) {
-                conn.setRequestProperty("Origin", "https://listen.tidal.com")
-                conn.setRequestProperty("Referer", "https://listen.tidal.com/")
-            } else {
-                conn.setRequestProperty("Origin", request.requestHeaders?.get("Origin") ?: "https://$host")
-                conn.setRequestProperty("Referer", request.requestHeaders?.get("Referer") ?: "https://$host/")
-                conn.setRequestProperty("X-Forwarded-Proto", "https")
-            }
+            conn.setRequestProperty("Origin", request.requestHeaders?.get("Origin") ?: "https://$host")
+            conn.setRequestProperty("Referer", request.requestHeaders?.get("Referer") ?: "https://$host/")
+            conn.setRequestProperty("X-Forwarded-Proto", "https")
 
             CookieManager.getInstance().getCookie(request.url.toString())?.let { conn.setRequestProperty("Cookie", it) }
             conn.connect()
@@ -109,13 +106,16 @@ object NetworkHelper {
                 }
             }
 
-            respHeaders["Access-Control-Allow-Origin"] = if (isTidal || isWorker) (request.requestHeaders?.get("Origin") ?: "*") else (request.requestHeaders?.get("Origin") ?: "https://$host")
+            respHeaders["Access-Control-Allow-Origin"] = if (isWorker) (request.requestHeaders?.get("Origin") ?: "*") else (request.requestHeaders?.get("Origin") ?: "https://$host")
             respHeaders["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, PATCH, OPTIONS"
             respHeaders["Access-Control-Allow-Headers"] = "*"
             respHeaders["Access-Control-Allow-Credentials"] = "true"
 
             val stream = if (conn.responseCode >= 400) conn.errorStream ?: ByteArrayInputStream(ByteArray(0)) else conn.inputStream
             WebResourceResponse(mime, null, conn.responseCode, conn.responseMessage ?: "OK", respHeaders, stream)
-        } catch (_: Exception) { null }
+        } catch (e: Exception) {
+            android.util.Log.e("MonochromeNetwork", "Error in proxyWithCors: ${e.message}", e)
+            null
+        }
     }
 }
