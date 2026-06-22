@@ -27,7 +27,6 @@ import com.monochrome.app.Constants.ACTION_PLAY
 import com.monochrome.app.Constants.ACTION_PREVIOUS
 import com.monochrome.app.Constants.DEFAULT_ORIGIN
 import com.monochrome.app.Constants.JS_HOOKS
-import com.monochrome.app.Constants.MIME_HTML
 import com.monochrome.app.Constants.MIME_MPEG
 import com.monochrome.app.Constants.MIME_OCTET_STREAM
 import com.monochrome.app.Constants.PROXY_UA
@@ -36,23 +35,26 @@ import com.monochrome.app.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
 
+    // ─── UI Components ───────────────────────────────────────────────────────
     lateinit var webView: WebView
     private lateinit var binding: ActivityMainBinding
 
+    // ─── App State & Pending Actions ─────────────────────────────────────────
+    private var hooksInjected = false
     private var pendingBlobUrl: String? = null
     private var pendingBlobMime: String? = null
     private var pendingBlobName: String? = null
     private var pendingFolderCbId: String? = null
 
-    private var hooksInjected = false
+    // ─── Pull-to-Reload State ────────────────────────────────────────────────
     private var pullStartY = 0f
     private var pullReloadPosted = false
+    private var pullStartedInZone = false
     private val pullHandler = Handler(Looper.getMainLooper())
     private val pullThresholdPx get() = 80f * resources.displayMetrics.density
     private val holdDurationMs = 3000L
-    private var pullStartedInZone = false
 
-    // ─── Activity Launchers ──────────────────────────────────────────────────
+    // ─── Activity Result Launchers ───────────────────────────────────────────
 
     private val reqStoragePerm = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) {
@@ -96,6 +98,8 @@ class MainActivity : AppCompatActivity() {
             }
         }.start()
     }
+
+    // ─── Broadcast Receivers ─────────────────────────────────────────────────
 
     private val mediaControlReceiver = object : BroadcastReceiver() {
         override fun onReceive(ctx: Context, intent: Intent) {
@@ -240,10 +244,10 @@ class MainActivity : AppCompatActivity() {
                 return true
             }
 
-        if (url.startsWith("http://") && (url.contains("monochrome.tf") || url.contains("lossless.wtf"))) {
-            view.loadUrl(url.replace("http://", "https://"))
-            return true
-        }
+            if (url.startsWith("http://") && (url.contains("monochrome.tf") || url.contains("lossless.wtf"))) {
+                view.loadUrl(url.replace("http://", "https://"))
+                return true
+            }
             return false
         }
 
@@ -275,11 +279,6 @@ class MainActivity : AppCompatActivity() {
 
             return when {
                 isLocalFile -> serveLocalFile(request)
-                isMainDomain && method == "GET" && !url.path.orEmpty().contains("oauth") -> {
-                    val acceptsHtml = request.requestHeaders?.get("Accept")?.contains(MIME_HTML, ignoreCase = true) == true
-                    val looksLikeHtml = url.path.let { it == "/" || it?.endsWith(".html") == true }
-                    if (acceptsHtml || looksLikeHtml) NetworkHelper.injectHooks(request) else null
-                }
                 host.contains("discord.com") || host.contains("appleid.apple.com") || host.contains("google.com") || host.contains("accounts.google") || host.contains("gstatic.com") || host.contains("googleusercontent.com") || host.contains("play.google.com") -> null
                 (isMonochrome || isWorker) && (method == "GET" || method == "OPTIONS") -> {
                     if (method == "OPTIONS") NetworkHelper.corsOkResponse(request.requestHeaders) else NetworkHelper.proxyWithCors(request, method)
@@ -300,27 +299,35 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("ClickableViewAccessibility")
     private fun setupPullToReload() {
-        webView.setOnTouchListener { v, event ->
+        webView.setOnTouchListener { _, event ->
+            val url = webView.url ?: ""
+            // Relaxed home page check (root domain with or without trailing slash/fragments)
+            val isHome = url.startsWith(SITE_URL) && (url.length <= SITE_URL.length + 1 || url[SITE_URL.length] == '#' || url[SITE_URL.length] == '?')
+
+            if (!isHome) {
+                if (pullReloadPosted) cancelPullReload()
+                return@setOnTouchListener false
+            }
+
             val atTop = !webView.canScrollVertically(-1)
-            val screenHeight = resources.displayMetrics.heightPixels
-            val topZone = screenHeight * 0.2f
+            val topZonePx = 120f * resources.displayMetrics.density
 
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
                     pullStartY = event.rawY
                     pullReloadPosted = false
-                    pullStartedInZone = event.rawY <= topZone
+                    pullStartedInZone = event.rawY <= topZonePx
                 }
                 MotionEvent.ACTION_MOVE -> {
-                    if (!pullStartedInZone) return@setOnTouchListener false
-
-                    val dy = event.rawY - pullStartY
-                    if (atTop && dy > pullThresholdPx && !pullReloadPosted) {
-                        startPullReloadTimer()
-                        v.performClick()
-                        return@setOnTouchListener true
-                    } else if (dy < 0 || (pullReloadPosted && dy < pullThresholdPx)) {
-                        cancelPullReload()
+                    if (pullStartedInZone && atTop) {
+                        val dy = event.rawY - pullStartY
+                        if (dy > pullThresholdPx) {
+                            if (!pullReloadPosted) startPullReloadTimer()
+                        } else if (dy < pullThresholdPx / 2) {
+                            if (pullReloadPosted) cancelPullReload()
+                        }
+                    } else {
+                        if (pullReloadPosted) cancelPullReload()
                     }
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
@@ -328,6 +335,8 @@ class MainActivity : AppCompatActivity() {
                     pullStartedInZone = false
                 }
             }
+            // CRITICAL: Always return false so the WebView handles all scrolling natively.
+            // This prevents the "stuck scroll" issue by never consuming events intended for the WebView.
             false
         }
     }

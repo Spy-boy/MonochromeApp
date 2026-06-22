@@ -250,10 +250,15 @@ class MusicService : MediaBrowserServiceCompat() {
             .setSilent(true)
             .setOngoing(isPlaying)
 
-        builder.addAction(android.R.drawable.ic_media_previous, "Previous", MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS))
-        if (isPlaying) builder.addAction(android.R.drawable.ic_media_pause, "Pause", MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_PAUSE))
-        else builder.addAction(android.R.drawable.ic_media_play, "Play", MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_PLAY))
-        builder.addAction(android.R.drawable.ic_media_next, "Next", MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_SKIP_TO_NEXT))
+        val nextPi = PendingIntent.getBroadcast(this, 1, Intent(ACTION_NEXT).setPackage(packageName), flags)
+        val prevPi = PendingIntent.getBroadcast(this, 2, Intent(ACTION_PREVIOUS).setPackage(packageName), flags)
+        val playPi = PendingIntent.getBroadcast(this, 3, Intent(ACTION_PLAY).setPackage(packageName), flags)
+        val pausePi = PendingIntent.getBroadcast(this, 4, Intent(ACTION_PAUSE).setPackage(packageName), flags)
+
+        builder.addAction(android.R.drawable.ic_media_previous, "Previous", prevPi)
+        if (isPlaying) builder.addAction(android.R.drawable.ic_media_pause, "Pause", pausePi)
+        else builder.addAction(android.R.drawable.ic_media_play, "Play", playPi)
+        builder.addAction(android.R.drawable.ic_media_next, "Next", nextPi)
 
         builder.setStyle(androidx.media.app.NotificationCompat.MediaStyle().setMediaSession(mediaSession?.sessionToken).setShowActionsInCompactView(0, 1, 2))
 
