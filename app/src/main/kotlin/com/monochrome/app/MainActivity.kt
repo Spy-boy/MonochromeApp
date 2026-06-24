@@ -301,7 +301,6 @@ class MainActivity : AppCompatActivity() {
     private fun setupPullToReload() {
         webView.setOnTouchListener { _, event ->
             val url = webView.url ?: ""
-            // Relaxed home page check (root domain with or without trailing slash/fragments)
             val isHome = url.startsWith(SITE_URL) && (url.length <= SITE_URL.length + 1 || url[SITE_URL.length] == '#' || url[SITE_URL.length] == '?')
 
             if (!isHome) {
@@ -310,19 +309,24 @@ class MainActivity : AppCompatActivity() {
             }
 
             val atTop = !webView.canScrollVertically(-1)
-            val topZonePx = 120f * resources.displayMetrics.density
+            val topZonePx = 100f * resources.displayMetrics.density
 
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
                     pullStartY = event.rawY
                     pullReloadPosted = false
                     pullStartedInZone = event.rawY <= topZonePx
+                    // MUST return false to let WebView handle the initial touch/click
+                    return@setOnTouchListener false
                 }
                 MotionEvent.ACTION_MOVE -> {
                     if (pullStartedInZone && atTop) {
                         val dy = event.rawY - pullStartY
                         if (dy > pullThresholdPx) {
                             if (!pullReloadPosted) startPullReloadTimer()
+                            // If we've started the reload timer, we can return true to "lock" the gesture,
+                            // but ONLY if we are sure it's a pull down. 
+                            // To be safest for scrolling, we stay passive.
                         } else if (dy < pullThresholdPx / 2) {
                             if (pullReloadPosted) cancelPullReload()
                         }
@@ -335,8 +339,7 @@ class MainActivity : AppCompatActivity() {
                     pullStartedInZone = false
                 }
             }
-            // CRITICAL: Always return false so the WebView handles all scrolling natively.
-            // This prevents the "stuck scroll" issue by never consuming events intended for the WebView.
+            // CRITICAL: Always return false so the WebView handles all events (clicks, scrolls) natively.
             false
         }
     }
