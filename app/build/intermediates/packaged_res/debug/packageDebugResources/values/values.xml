@@ -9,14 +9,19 @@
         <item quantity="other">Loaded %d tracks</item>
     </plurals>
     <string name="app_name">Monochrome</string>
+    <string name="cancel">Cancel</string>
     <string name="download_failed">Download failed: %s</string>
     <string name="downloading_file">Downloading: %s</string>
+    <string name="local_folder">Local Folder</string>
     <string name="no_audio_files_found">No audio files found</string>
     <string name="preparing_file">Preparing: %s…</string>
     <string name="pull_to_reload_hold">3</string>
     <string name="pull_to_reload_reloading_in">%d</string>
     <string name="reloading">Reloading…</string>
+    <string name="reuse">Reuse</string>
+    <string name="reuse_last_folder_prompt">A previously selected folder was found. Would you like to reuse it?</string>
     <string name="saved_file">Saved: %s</string>
+    <string name="select_new">Select New</string>
     <string name="storage_permission_denied">Storage permission denied</string>
     <string name="unsupported_download_type">Unsupported download type</string>
     <style name="Theme.Monochrome" parent="Theme.MaterialComponents.DayNight.NoActionBar">

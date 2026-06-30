@@ -7,18 +7,27 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.MotionEvent
 import android.view.View
-import android.webkit.*
+import android.webkit.CookieManager
+import android.webkit.URLUtil
+import android.webkit.ValueCallback
+import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
+import android.webkit.WebSettings
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
 import androidx.core.net.toUri
 import androidx.core.view.isGone
 import com.monochrome.app.Constants.ACTION_NEXT
@@ -32,19 +41,24 @@ import com.monochrome.app.Constants.MIME_OCTET_STREAM
 import com.monochrome.app.Constants.PROXY_UA
 import com.monochrome.app.Constants.SITE_URL
 import com.monochrome.app.databinding.ActivityMainBinding
+import java.io.ByteArrayInputStream
 
 class MainActivity : AppCompatActivity() {
+
+    private companion object {
+        const val PREF_LAST_URI = "last_tree_uri"
+    }
 
     // ─── UI Components ───────────────────────────────────────────────────────
     lateinit var webView: WebView
     private lateinit var binding: ActivityMainBinding
 
     // ─── App State & Pending Actions ─────────────────────────────────────────
-    private var hooksInjected = false
     private var pendingBlobUrl: String? = null
     private var pendingBlobMime: String? = null
     private var pendingBlobName: String? = null
     private var pendingFolderCbId: String? = null
+    private var fileChooserCallback: ValueCallback<Array<Uri>>? = null
 
     // ─── Pull-to-Reload State ────────────────────────────────────────────────
     private var pullStartY = 0f
@@ -53,6 +67,7 @@ class MainActivity : AppCompatActivity() {
     private val pullHandler = Handler(Looper.getMainLooper())
     private val pullThresholdPx get() = 80f * resources.displayMetrics.density
     private val holdDurationMs = 3000L
+    private var isNetworkBlocked = false
 
     // ─── Activity Result Launchers ───────────────────────────────────────────
 
@@ -83,20 +98,14 @@ class MainActivity : AppCompatActivity() {
         } catch (_: Exception) { }
 
         pendingFolderCbId = null
+        saveLastFolder(uri)
+        processFolder(uri, id)
+    }
 
-        Thread {
-            val files = FileSystemHelper.enumerateAudioFiles(contentResolver, uri)
-            runOnUiThread {
-                if (files.isEmpty()) {
-                    ToastHelper.showToast(this, getString(R.string.no_audio_files_found))
-                    webView.evaluateJavascript("window.__mcPendingFolder = null; window.__mcResolveFolder('$id');", null)
-                } else {
-                    val json = FileSystemHelper.buildJson(contentResolver, files)
-                    webView.evaluateJavascript("window.__mcPendingFolder=$json; window.__mcResolveFolder('$id');", null)
-                    ToastHelper.showToast(this, resources.getQuantityString(R.plurals.loaded_tracks, files.size, files.size))
-                }
-            }
-        }.start()
+    private val filePicker = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        val results = if (uri != null) arrayOf(uri) else null
+        fileChooserCallback?.onReceiveValue(results)
+        fileChooserCallback = null
     }
 
     // ─── Broadcast Receivers ─────────────────────────────────────────────────
@@ -137,13 +146,12 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        webView.onResume()
-        webView.resumeTimers()
+        // Removed webView.onResume() to prevent background freezing
     }
 
     override fun onPause() {
         super.onPause()
-        webView.onPause()
+        // Removed webView.onPause() to keep JS media session alive in background
         CookieManager.getInstance().flush()
     }
 
@@ -251,20 +259,11 @@ class MainActivity : AppCompatActivity() {
             return false
         }
 
-        override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
-            super.onPageStarted(view, url, favicon)
-            hooksInjected = false
-        }
-
         override fun onPageFinished(view: WebView, url: String) {
             super.onPageFinished(view, url)
             binding.pullIndicator.visibility = View.GONE
             CookieManager.getInstance().flush()
-
-            if (!hooksInjected) {
-                hooksInjected = true
-                view.evaluateJavascript(JS_HOOKS, null)
-            }
+            view.evaluateJavascript(JS_HOOKS, null)
         }
 
         override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
@@ -274,13 +273,17 @@ class MainActivity : AppCompatActivity() {
 
             val isWorker = host.endsWith(".workers.dev")
             val isLocalFile = host == "local-file.monochrome.tf"
-            val isMainDomain = host == "monochrome.tf" || host == "monochrome.samidy.com" || host == "lossless.wtf" || host == "localhost" || host == "127.0.0.1"
-            val isMonochrome = isMainDomain || host.endsWith(".monochrome.tf") || host.startsWith("auth.")
+            // Only proxy workers or specific subdomains that strictly require manual CORS headers
+            val shouldProxy = isWorker || host.startsWith("auth.") || (host.endsWith(".monochrome.tf") && host != "monochrome.tf")
+
+            if (isNetworkBlocked && !isLocalFile) {
+                return WebResourceResponse("text/plain", "UTF-8", 503, "Offline Mode", null, ByteArrayInputStream(ByteArray(0)))
+            }
 
             return when {
                 isLocalFile -> serveLocalFile(request)
-                host.contains("discord.com") || host.contains("appleid.apple.com") || host.contains("google.com") || host.contains("accounts.google") || host.contains("gstatic.com") || host.contains("googleusercontent.com") || host.contains("play.google.com") -> null
-                (isMonochrome || isWorker) && (method == "GET" || method == "OPTIONS") -> {
+                // Let the main domain and typical sub-resources load natively for maximum speed and caching
+                shouldProxy && (method == "GET" || method == "OPTIONS") -> {
                     if (method == "OPTIONS") NetworkHelper.corsOkResponse(request.requestHeaders) else NetworkHelper.proxyWithCors(request, method)
                 }
                 else -> null
@@ -289,8 +292,22 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun createWebChromeClient() = object : WebChromeClient() {
-        override fun onConsoleMessage(consoleMessage: ConsoleMessage?): Boolean {
-            android.util.Log.d("MonochromeJS", "${consoleMessage?.messageLevel()}: ${consoleMessage?.message()} -- From line ${consoleMessage?.lineNumber()} of ${consoleMessage?.sourceId()}")
+
+        override fun onShowFileChooser(
+            webView: WebView?,
+            filePathCallback: ValueCallback<Array<Uri>>?,
+            fileChooserParams: FileChooserParams?
+        ): Boolean {
+            fileChooserCallback?.onReceiveValue(null)
+            fileChooserCallback = filePathCallback
+
+            try {
+                filePicker.launch("*/*")
+            } catch (_: Exception) {
+                fileChooserCallback?.onReceiveValue(null)
+                fileChooserCallback = null
+                return false
+            }
             return true
         }
     }
@@ -405,9 +422,41 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    fun launchFolderPicker(callbackId: String) {
+    fun launchFolderPicker(callbackId: String, forceNew: Boolean = false) {
         pendingFolderCbId = callbackId
-        runOnUiThread { folderPicker.launch(null) }
+        val lastUri = getLastFolder()
+        if (lastUri != null && !forceNew) {
+            processFolder(lastUri, callbackId)
+        } else {
+            runOnUiThread { folderPicker.launch(null) }
+        }
+    }
+
+    private fun saveLastFolder(uri: Uri) {
+        getPreferences(MODE_PRIVATE).edit { putString(PREF_LAST_URI, uri.toString()) }
+    }
+
+    private fun getLastFolder(): Uri? {
+        val uriStr = getPreferences(MODE_PRIVATE).getString(PREF_LAST_URI, null) ?: return null
+        val uri = uriStr.toUri()
+        val hasPerm = contentResolver.persistedUriPermissions.any { it.uri == uri && it.isReadPermission }
+        return if (hasPerm) uri else null
+    }
+
+    private fun processFolder(uri: Uri, callbackId: String) {
+        Thread {
+            val files = FileSystemHelper.enumerateAudioFiles(contentResolver, uri)
+            runOnUiThread {
+                if (files.isEmpty()) {
+                    ToastHelper.showToast(this, getString(R.string.no_audio_files_found))
+                    webView.evaluateJavascript("window.__mcPendingFolder = null; window.__mcResolveFolder('$callbackId');", null)
+                } else {
+                    val json = FileSystemHelper.buildJson(files)
+                    webView.evaluateJavascript("window.__mcPendingFolder=$json; window.__mcResolveFolder('$callbackId');", null)
+                    ToastHelper.showToast(this, resources.getQuantityString(R.plurals.loaded_tracks, files.size, files.size))
+                }
+            }
+        }.start()
     }
 
     fun evaluateJs(script: String) {
@@ -416,14 +465,42 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    fun triggerNetworkCut() {
+        // Cancel any pending restoration and reset flag to ensure it triggers EVERY time
+        pullHandler.removeCallbacksAndMessages("NETWORK_RESTORE")
+        isNetworkBlocked = true
+        ToastHelper.showToast(this, "We Go Local")
+        
+        pullHandler.postAtTime({
+            isNetworkBlocked = false
+            ToastHelper.showToast(this, "Enjoy")
+        }, "NETWORK_RESTORE", android.os.SystemClock.uptimeMillis() + 5000)
+    }
+
     // ─── Local File Serving & Downloads ──────────────────────────────────────
 
     private fun serveLocalFile(request: WebResourceRequest): WebResourceResponse? {
+        val method = (request.method ?: "GET").uppercase()
+        if (method == "OPTIONS") return NetworkHelper.corsOkResponse(request.requestHeaders)
+
         val uriStr = request.url.getQueryParameter("uri") ?: return null
         return try {
             val uri = uriStr.toUri()
             var mime = contentResolver.getType(uri) ?: MIME_MPEG
-            if (mime == MIME_OCTET_STREAM && uri.path?.endsWith(".flac") == true) mime = Constants.MIME_FLAC
+            
+            if (mime == MIME_OCTET_STREAM || mime == MIME_MPEG) {
+                val path = uri.path?.lowercase() ?: ""
+                mime = when {
+                    path.endsWith(".flac") -> "audio/flac"
+                    path.endsWith(".wav") -> "audio/wav"
+                    path.endsWith(".mp3") -> "audio/mpeg"
+                    path.endsWith(".m4a") -> "audio/mp4"
+                    path.endsWith(".ogg") -> "audio/ogg"
+                    path.endsWith(".opus") -> "audio/opus"
+                    path.endsWith(".aac") -> "audio/aac"
+                    else -> mime
+                }
+            }
             
             val pfd = contentResolver.openFileDescriptor(uri, "r") ?: return null
             val totalLength = pfd.statSize
@@ -432,7 +509,7 @@ class MainActivity : AppCompatActivity() {
             val rangeHeader = request.requestHeaders["Range"]
             val headers = mutableMapOf(
                 "Access-Control-Allow-Origin" to (request.requestHeaders["Origin"] ?: DEFAULT_ORIGIN),
-                "Access-Control-Allow-Methods" to "GET",
+                "Access-Control-Allow-Methods" to "GET, OPTIONS",
                 "Access-Control-Allow-Credentials" to "true",
                 "Accept-Ranges" to "bytes",
                 "Cache-Control" to "no-cache",

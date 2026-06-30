@@ -2,9 +2,11 @@
 
 ## 🚀 Improvements & New Features
 
-### 🔄 Refined Pull-to-Reload
-- **Restricted Trigger Zone**: The pull-to-reload gesture is now restricted to the top **20% of the screen**. This significantly reduces accidental reloads while scrolling or interacting with the main content area.
-- **Improved Stability**: The reload mechanism is now more robust against rapid gestures.
+### 📁 Enhanced Local Music Support
+- **Automated Folder Loading**: The app now silently remembers your music folder and reloads it automatically on start-up.
+- **Manual "Change Folder" Override**: Added full support for the "Change Folder" button to easily switch music sources.
+- **High-Speed Scanning**: Optimized the folder scanner to load large music libraries near-instantly by batching file type detection.
+- **We Go Local Mode**: Switching to the "Local Files" section now triggers a brief 5-second network blackout to ensure an immersive offline-focused experience.
 
 ### 🧹 Codebase Cleanup & Optimization
 - **Refactored MainActivity**: Reorganized lifecycle management and UI setup logic for better maintainability and performance.

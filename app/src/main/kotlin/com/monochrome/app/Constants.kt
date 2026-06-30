@@ -17,7 +17,6 @@ object Constants {
     const val MIME_MPEG            = "audio/mpeg"
     const val MIME_FLAC            = "audio/flac"
     const val MIME_OCTET_STREAM    = "application/octet-stream"
-    const val MIME_HTML            = "text/html"
 
     // ─── Network Constants ───────────────────────────────────────────────
     const val DEFAULT_ORIGIN       = "https://monochrome.tf"
@@ -152,6 +151,14 @@ object Constants {
           }
         }
       } catch(e){}
+
+      // Fallback for metadata-based detection
+      if (!localUri && navigator.mediaSession && navigator.mediaSession.metadata) {
+         var md = navigator.mediaSession.metadata;
+         if (md.artwork && md.artwork.length > 0 && md.artwork[0].src.includes('local-file.monochrome.tf')) {
+            localUri = 'persistent-local'; // Flag for native side
+         }
+      }
 
       if(t !== lastT || a !== lastA || art !== lastArt || currentSrc !== lastSrc){
         lastT = t; lastA = a; lastArt = art; lastSrc = currentSrc;
@@ -371,7 +378,9 @@ object Constants {
           if(err || !files){ rej(new DOMException(err || 'Cancelled', 'AbortError')); return; }
           res(makeDirHandle(files));
         };
-        MonochromeApp.requestFolderPicker(cbId);
+        var force = !!window.__mcForcePicker;
+        window.__mcForcePicker = false;
+        MonochromeApp.requestFolderPicker(cbId, force);
       });
     };
     window.showOpenFilePicker = async function(){
@@ -382,7 +391,6 @@ object Constants {
   // 5. Service Worker Auto-Update
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.addEventListener('controllerchange', function() {
-      console.log('MonochromeJS: Service Worker Controller changed, reloading...');
       window.location.reload();
     });
     navigator.serviceWorker.getRegistration().then(function(reg) {
@@ -392,7 +400,6 @@ object Constants {
           if (newWorker) {
             newWorker.addEventListener('statechange', function() {
               if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                console.log('MonochromeJS: New Service Worker installed, triggering skipWaiting...');
                 newWorker.postMessage({ type: 'SKIP_WAITING' });
               }
             });
@@ -404,7 +411,21 @@ object Constants {
     });
   }
 
-  console.log('Monochrome Hooks Injected Successfully');
+  // 6. Change Folder Interceptor
+  document.addEventListener('click', function(e){
+    var btn = e.target && e.target.closest ? e.target.closest('button, .btn, [role="button"]') : null;
+    if(btn && btn.innerText && btn.innerText.includes('Change Folder')){
+       window.__mcForcePicker = true;
+    }
+  }, true);
+
+  // 7. Local Files Tab Interceptor
+  document.addEventListener('click', function(e){
+    var el = e.target && e.target.closest ? e.target.closest('.tab, [role="tab"], button, div') : null;
+    if(el && el.innerText && el.innerText.trim() === 'Local Files'){
+       MonochromeApp.onLocalFilesSelected();
+    }
+  }, true);
 })();
 """
 }

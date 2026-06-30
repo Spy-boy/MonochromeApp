@@ -14,4 +14,9 @@
     <string name="download_failed">Download failed: %s</string>
     <string name="saved_file">Saved: %s</string>
     <string name="unsupported_download_type">Unsupported download type</string>
+    <string name="local_folder">Local Folder</string>
+    <string name="reuse_last_folder_prompt">A previously selected folder was found. Would you like to reuse it?</string>
+    <string name="reuse">Reuse</string>
+    <string name="select_new">Select New</string>
+    <string name="cancel">Cancel</string>
 </resources>

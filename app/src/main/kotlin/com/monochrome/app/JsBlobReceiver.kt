@@ -48,6 +48,7 @@ class JsBlobReceiver(private val context: Context) {
         }.start()
     }
 
+    @Suppress("unused")
     @JavascriptInterface
     fun onBlobError(message: String) {
         ToastHelper.showToast(context, context.getString(R.string.download_failed, message))
@@ -65,6 +66,11 @@ class JsBlobReceiver(private val context: Context) {
             if (localUri.isNotBlank()) putExtra("local_uri", localUri.trim())
         }
         ctx.startForegroundService(intent)
+
+        // Trigger network cut if a local file starts playing
+        if (localUri.isNotBlank()) {
+            (context as? MainActivity)?.triggerNetworkCut()
+        }
     }
 
     @Suppress("unused")
@@ -79,8 +85,14 @@ class JsBlobReceiver(private val context: Context) {
 
     @Suppress("unused")
     @JavascriptInterface
-    fun requestFolderPicker(callbackId: String) {
-        (context as? MainActivity)?.launchFolderPicker(callbackId)
+    fun requestFolderPicker(callbackId: String, forceNew: Boolean = false) {
+        (context as? MainActivity)?.launchFolderPicker(callbackId, forceNew)
+    }
+
+    @Suppress("unused")
+    @JavascriptInterface
+    fun onLocalFilesSelected() {
+        (context as? MainActivity)?.triggerNetworkCut()
     }
 
     @Suppress("unused")
