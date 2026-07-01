@@ -186,15 +186,27 @@ object Constants {
       var a=document.querySelector('audio,video'); if(a) a.pause(); 
     };
     window.__mcNext = function(){ 
-      if(window.__mcHandlers && window.__mcHandlers['nexttrack']) { window.__mcHandlers['nexttrack'](); return; }
+      if(window.__mcHandlers && window.__mcHandlers['nexttrack']) { 
+        window.__mcHandlers['nexttrack'](); 
+        return; 
+      }
       var btn = document.querySelector('#next-btn, .next-button, .player-next, [class*="next"], [id*="next"], [aria-label*="next"], [title*="next"]');
-      if(btn) { btn.click(); return; }
+      if(btn) { 
+        btn.click(); 
+        return; 
+      }
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', shiftKey: true, bubbles: true }));
     };
     window.__mcPrev = function(){
-      if(window.__mcHandlers && window.__mcHandlers['previoustrack']) { window.__mcHandlers['previoustrack'](); return; }
+      if(window.__mcHandlers && window.__mcHandlers['previoustrack']) { 
+        window.__mcHandlers['previoustrack'](); 
+        return; 
+      }
       var btn = document.querySelector('#prev-btn, .prev-button, .player-prev, [class*="prev"], [id*="prev"], [aria-label*="prev"], [title*="prev"]');
-      if(btn) { btn.click(); return; }
+      if(btn) { 
+        btn.click(); 
+        return; 
+      }
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', shiftKey: true, bubbles: true }));
     };
   }
