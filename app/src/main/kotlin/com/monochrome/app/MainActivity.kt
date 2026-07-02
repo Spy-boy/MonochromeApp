@@ -29,6 +29,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.core.net.toUri
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isGone
 import com.monochrome.app.Constants.ACTION_NEXT
 import com.monochrome.app.Constants.ACTION_PAUSE
@@ -136,6 +138,7 @@ class MainActivity : AppCompatActivity() {
         requestRuntimePermissions()
         setupOnBackPressed()
         registerMediaControlReceiver()
+        setupKeyboardListener()
 
         if (savedInstanceState != null) {
             webView.restoreState(savedInstanceState)
@@ -313,6 +316,22 @@ class MainActivity : AppCompatActivity() {
     }
 
     // ─── UI Helpers ──────────────────────────────────────────────────────────
+
+    private fun setupKeyboardListener() {
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
+            val imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime())
+            val navInsets = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
+            
+            val bottomPadding = if (imeInsets.bottom > 0) {
+                imeInsets.bottom - navInsets.bottom
+            } else {
+                0
+            }
+            
+            webView.setPadding(0, 0, 0, bottomPadding.coerceAtLeast(0))
+            insets
+        }
+    }
 
     @SuppressLint("ClickableViewAccessibility")
     private fun setupPullToReload() {

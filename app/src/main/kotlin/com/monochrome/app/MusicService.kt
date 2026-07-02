@@ -15,6 +15,7 @@ import android.media.AudioManager
 import android.media.MediaMetadataRetriever
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
@@ -48,6 +49,7 @@ class MusicService : MediaBrowserServiceCompat() {
     private var currentLocalUri = ""
     private var currentBitmap: Bitmap? = null
     private var isPlaying = false
+    private var wakeLock: PowerManager.WakeLock? = null
 
     private val noisyReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -59,6 +61,11 @@ class MusicService : MediaBrowserServiceCompat() {
 
     override fun onCreate() {
         super.onCreate()
+        val pm = getSystemService(POWER_SERVICE) as PowerManager
+        wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Monochrome:MusicPlayback").apply {
+            setReferenceCounted(false)
+        }
+
         createNotificationChannel()
         setupMediaSession()
         registerReceiver(noisyReceiver, IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY))
@@ -90,6 +97,12 @@ class MusicService : MediaBrowserServiceCompat() {
                 if (playing != isPlaying) {
                     isPlaying = playing
                     needsUpdate = true
+                    
+                    if (playing) {
+                        wakeLock?.acquire(2 * 60 * 60 * 1000L /*2 hours*/)
+                    } else {
+                        if (wakeLock?.isHeld == true) wakeLock?.release()
+                    }
                 }
             }
         }
@@ -206,6 +219,7 @@ class MusicService : MediaBrowserServiceCompat() {
 
     override fun onDestroy() {
         try { unregisterReceiver(noisyReceiver) } catch (_: Exception) { }
+        if (wakeLock?.isHeld == true) wakeLock?.release()
         mediaSession?.release()
         mediaSession = null
         super.onDestroy()
